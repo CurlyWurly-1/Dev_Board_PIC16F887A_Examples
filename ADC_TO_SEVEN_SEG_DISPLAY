@@ -1,5 +1,6 @@
 /****************************************************************************************
-* Analogue to Digital
+* Measure Analogue to Digital with the value output on 4 seven segment displays 
+* Written by Peter Matthews 
 ****************************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,83 +14,86 @@
 #pragma config WRT = OFF        // Flash Program Memory Write Enable bits (Write protection off; all program memory may be written to by EECON control)
 #pragma config CP = OFF         // Flash Program Memory Code Protection bit (Code protection off)
 
-const unsigned char TABLE[] = {0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};
-#define AN0 CHS0=CHS1=CHS2=0;
-
-void adc_on();
-void adc_off();
-void DELAY();                                   //delay
-void DELAY1();
-void init();                                    //
-void seven_seg_display(int x);                  //
-void adc_init();                                //adc
-
-unsigned int ad_0();                            //adc
-
- #ifndef _XTAL_FREQ
- // Unless specified elsewhere, 4MHz system frequency is assumed
+// Unless specified elsewhere, 4MHz system frequency is assumed
+#ifndef _XTAL_FREQ
  #define _XTAL_FREQ 4000000
- #endif
+#endif
 
+// Array to hold the "Seven segment pattern" for numbers 0 to 9 
+const unsigned char TABLE[] = {0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};
+
+void init();                                    //
+unsigned int adc_read();                        // 
+void seven_seg_display(int value);              //
+void DELAY_SCN();
 
 /****************************************************************************
-* main
+* main()
 ****************************************************************************/
 void main()
 {
-        int result  = 0x00;          		//
-        int resulta  = 0x00;          		//
+    int result  = 0x00;          		
+    int result1 = 0x00;   		   
+    int result2 = 0x00;   		  
+    int result3 = 0x00;   		  
+    int result4 = 0x00;   
+    
+    init();                             
         
-        int cnt;
-        int i;
-        init();  				//
-        adc_init();
-        result = 0x00;
-        while (1)                  		//
-        {
-            for (cnt=900;cnt--;)               //
-            {                                   //
-                resulta = 0x00;              	//
-                resulta = ad_0();
-  
-                // Low pass filter - nice way to smooth things
-                result  = result + (0.15 * (resulta - result ));
-                seven_seg_display(result);      // Send to Display
-            }
-        }
+    while (1)                           
+    {
+        // Average the last four "averaged" results 
+        result4 = result3;
+        result3 = result2;
+        result2 = result1;
+        result1 = adc_read();
+        result1 = ( result1 + result2 + result3 + result4 )/4 ;
+        // Use Low pass filter     
+        result  = result + (0.16 * (result1 - result ));
+        // Send to Display
+        seven_seg_display(result);  
+    }
 }
 
 /****************************************************************************
-* init
+* init()
 ****************************************************************************/
 void init()
 {
-	TRISA  = 0X00;                          //
-	TRISE  = 0X02;                          //
-	TRISD  = 0X00;                          //
-	ADCON1 = 0XB0;                          //
-	ADCON0 = 0X71;                          //
-	DELAY();                                //
-	PORTA  = 0x00;                          //
-	PORTD  = 0x00;
+// PORTS
+
+// RA0 to RA6 - For the 6 digit sinking transistors
+	PORTA  = 0xff;                          
+	TRISA  = 0X00;                          // Set all 6 to output  
+// RD0 to RD7 - 8 - Segment 1 - 7 & dot      
+	PORTD  = 0x00;                          
+	TRISD  = 0X00;                          // Set all 8 to output 
+// RE0 to RE2 - 3 - ADC inputs
+   	PORTE  = 0x00;                           
+	TRISE  = 0X02;                          // Set RE1 (AN6) to input
+
+
+// ADC 
+	ADCON1 = 0X80;                          // 0XB0 = 10000000, 
+                                            // 1   |0    |0|0|0000 
+                                            // ADFM|ADSC2|-|-|PCFG3-0  
+	ADCON0 = 0X70;                          // 0X70 = 01110001
+                                            // 01|110|0      |0|0 
+                                            // /8|AN6|Go/done|-|ADOFF   
+   // N.B. ADC Channel is selected from the ADCON0 command as above(110), but 
+   //      it could have been selected via either of the following 2 options: 
+   //      ****OPTION 1****
+   //        CHS0 = 0;               // \  
+   //        CHS1 = 1;               // |- Select Channel 6 (AN6)
+   //        CHS2 = 1;               // /  
+   //      ****OPTION 2****
+   //        ADCON0bits.CHS = 6;     // - Alternative to above 3 lines 
 }
 
 /****************************************************************************
-* adc_init
+* seven_seg_display(int value)
 ****************************************************************************/
-void adc_init()
-{
-	ADCON1=0X80;                            //
-	ADCS1 = 1;                              //FOSC/32
-	ADCS0 = 0;
-	ADON  = 1;
-	DELAY();                                //
-}
-
-/****************************************************************************
-* display
-****************************************************************************/
-void seven_seg_display(int x)
+void seven_seg_display(int value)
 {
     int thousands;
 	int hundreds; 
@@ -97,94 +101,68 @@ void seven_seg_display(int x)
     int ones;
     int temp;                              //
     
-	temp      = x;                         //
+	temp      = value;                     //
 	thousands = temp/1000;                 // Div by 1000  
 	hundreds  = (temp % 1000) / 100;       // (modulus from 1000) div     100 
 	tens      = (temp % 0x64) / 0xa;       // (modulus from 100)  div      10 
 	ones      = (temp % 0x64) % 0xa;       // (modulus from 100)  modulus  10
 
 // Thousands    
-    if(thousands > 0x09){
+    if(thousands > 0x09)
+    {
 		PORTD = ~0x71;                     //
-	}else{
-        if (thousands > 0x00) {
+	}
+    else
+    {
+        if (thousands > 0x00) 
+        {
             PORTD = ~TABLE[thousands];     //
             PORTA = ~0x08;                 // N.B. ~ is a "compliment" operator
-            DELAY1();                      //
+            DELAY_SCN();                   //
         };
     };    
 // Hundreds    
-    if ((hundreds>0) || (thousands>0)){
-        PORTD = ~TABLE[hundreds];              //
-        PORTA = ~0x04;                         //
-        DELAY1();                              //
+    if ((hundreds>0) || (thousands>0))
+    {
+        PORTD = ~TABLE[hundreds];          //
+        PORTA = ~0x04;                     //
+        DELAY_SCN();                       //
     };
 // Tens
-    if ((tens>0) || (hundreds>0) || (thousands>0)){
-        PORTD = ~TABLE[tens];                  //
-        PORTA = ~0x02;                         //
-        DELAY1();                              //
+    if ((tens>0) || (hundreds>0) || (thousands>0))
+    {
+        PORTD = ~TABLE[tens];              //
+        PORTA = ~0x02;                     //
+        DELAY_SCN();                       //
     };
 // Units
 	PORTD = ~TABLE[ones];                  //
 	PORTA = ~0x01;                         //
-	DELAY1();                              //
+    DELAY_SCN();                           //
 
     PORTA = 0xff;                          // Switch off
 }
 
 /****************************************************************************
-* ad_0()
+* adc_read()
 ****************************************************************************/
-unsigned int ad_0()
+unsigned int adc_read()
 {
-	unsigned int res;
-	adc_on();
-	CHS0 = 0;
-    CHS1 = 1;
-    CHS2 = 1;
-	DELAY1();                               //
-	GO = 1;                                 //
-    while (GO);                                 //
-	res = ADRESH&0x03;
-	res = res<<8|ADRESL;
-	adc_off();
-	return res ;                            //
+    ADON = 1;                               // Turn ON ADC capability  
+ 	__delay_us(10);                         //  
+	GO = 1;                                 // Take ADC reading
+    while (GO);                             // Wait until reading finished
+ 	ADON = 0;                               // Turn OFF ADC capability  
+//  int val = ADRESH&0x03;
+//	val     = val<<8|ADRESL;
+//  return val;
+    return((ADRESH<<8) + ADRESL);   // return right justified 10-bit result
 }
 
 /****************************************************************************
-* DELAY()
+* DELAY_SCN()
 ****************************************************************************/
-void DELAY()                                    //
+void DELAY_SCN()                                //
 {
-	int i;                                  //
-	for (i =10000;i--;);                    //
+    __delay_us(1000);
 }
-
-/****************************************************************************
-* adc_off()
-****************************************************************************/
-void adc_off()
-{
-	ADCON1 = 0X86;                          //1000_0110
-	ADON   = 0;
-}
-
-/****************************************************************************
-* adc_on()
-****************************************************************************/
-void adc_on()
-{
-	ADCON1 = 0X80;                          //1000_0000
-	ADON   = 1;
-}
-
-/****************************************************************************
-* DELAY1()
-****************************************************************************/
-void DELAY1()                                   //
-{
-	int i;                                  //
-	for (i =100;i--;);                      //
-}
-
