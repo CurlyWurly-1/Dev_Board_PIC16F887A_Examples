@@ -4,4 +4,4 @@ This repository is used for collecting C programs that work for a PIC16F887A usi
 
 <img src="sintech pic16f877a.jpg" alt="Dev board"/>
 
-N.B. I generated the C programs using the MPLAB X IDE with teh XC8 Compiler
+These C programs were generated using the MPLAB X IDE with the XC8 Compiler
