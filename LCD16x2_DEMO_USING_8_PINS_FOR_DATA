@@ -1,0 +1,122 @@
+/****************************************************************************************
+* Output Data to a 16X2 LCD using 8 bits
+* Written by Peter Matthews 
+****************************************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <xc.h>
+#pragma config FOSC = XT        // Oscillator Selection bits (XT oscillator)
+#pragma config WDTE = OFF       // Watchdog Timer Enable bit (WDT enabled)
+#pragma config PWRTE = OFF      // Power-up Timer Enable bit (PWRT disabled)
+#pragma config BOREN = OFF      // Brown-out Reset Enable bit (BOR disabled)
+#pragma config LVP = OFF        // Low-Voltage (Single-Supply) In-Circuit Serial Programming Enable bit (RB3 is digital I/O, HV on MCLR must be used for programming)
+#pragma config CPD = OFF        // Data EEPROM Memory Code Protection bit (Data EEPROM code protection off)
+#pragma config WRT = OFF        // Flash Program Memory Write Enable bits (Write protection off; all program memory may be written to by EECON control)
+#pragma config CP = OFF         // Flash Program Memory Code Protection bit (Code protection off)
+
+// Unless specified elsewhere, 4MHz system frequency is assumed
+#ifndef _XTAL_FREQ
+ #define _XTAL_FREQ 4000000
+#endif
+
+void lcdinit(void);
+void lcdclr(void);                  //LCD initialisation Function 
+void lcdcomd(unsigned char cmd);    //LCD Clear Function
+void lcddata(unsigned char byte);   //LCD Command Declaring Function
+
+// Data port setup
+#define DATADIR  TRISD   //LCD Data Port Direction Register
+#define DATA     PORTD   //LCD Data Port output pins (8 of them))
+
+// Control Port setup
+#define CNTRLDIR TRISA   //LCD Control Port Direction Register
+#define RS RA0           //LCD Control Port RS (Register Select) pin
+#define RW RA1           //LCD Control Port RW (Read/Write)      pin
+#define EN RA2           //LCD Control Port EN (Enable)          pin
+
+/****************************************************************************
+* void main()
+****************************************************************************/
+void main()
+{
+    int i;
+    unsigned char First[]={"Pete's Demo prog"};
+    unsigned char Secnd[]={"for data to LCD "};
+    lcdinit();
+    while(1)
+    {
+        lcdclr();
+        lcdcomd(0x80);
+    // Display the Message
+        for(i=0; i<16; i++)
+        {
+            lcddata(First[i]);
+            __delay_ms(100);
+        }
+        lcdcomd(0xc0);
+
+    // Display the Message
+        for(i=0; i<16; i++)
+        {
+            lcddata(Secnd[i]);
+            __delay_ms(100);
+        }
+        __delay_ms(500);
+    }
+}
+
+/****************************************************************************
+* void lcdinit(void)
+****************************************************************************/
+void lcdinit(void)
+{
+    int i;
+    unsigned char command[]={0x38,0x0c,0x06,0x01};
+    ADCON1   = 0x07;            //LCD Command set for 8 bit Interface, 2 Lines, 5x7 Dots 
+    CNTRLDIR = 0x00;            //Make LCD data    port as Digital output 
+    DATADIR  = 0x00;            //Make LCD control port as Digital output 
+    __delay_ms(5);
+
+    for(i=0; i<4; i++)          //Make LCD Data Port (PORTD) as output port 
+    {
+        lcdcomd(command[i]);    //Send the Initialisation Commands 
+        __delay_ms(5);     
+    }
+    __delay_ms(5);
+}
+
+/****************************************************************************
+* void lcdclr(void)
+****************************************************************************/
+void lcdclr(void)
+{
+//Send LCD clear command
+    lcdcomd(0x01);
+    __delay_ms(2);
+}
+
+/****************************************************************************
+* void lcdcomd(unsigned char cmd)
+****************************************************************************/
+void lcdcomd(unsigned char cmd)
+{
+    RS=0;
+    RW=0;
+    EN=1;       //Select Command Register, R/W--write enabled 
+    DATA=cmd;   //Enable LCD to accept commands 
+    EN=0;       //Give a Pulse via Enable pin
+    __delay_ms(5); 
+}
+
+/****************************************************************************
+* void lcddata(unsigned char byte)
+****************************************************************************/
+void lcddata(unsigned char byte)
+{
+    RS=1;
+    RW=0;
+    EN=1;       //Select Data register, R/W--write enabled 
+    DATA=byte;
+    EN=0;       //Give a Pulse via Enable Pin
+    __delay_ms(5);
+}
