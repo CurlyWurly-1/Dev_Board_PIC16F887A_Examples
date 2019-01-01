@@ -1,0 +1,207 @@
+/****************************************************************************************
+* 4X4 Keypad to a seven segment display displaying 0 to 15 
+* N.B. Don't forget to remove the pickit 3 after programming 
+* Written by Peter Matthews 
+****************************************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <xc.h>
+#pragma config FOSC = XT        // Oscillator Selection bits (XT oscillator)
+#pragma config WDTE = OFF       // Watchdog Timer Enable bit (WDT enabled)
+#pragma config PWRTE = OFF      // Power-up Timer Enable bit (PWRT disabled)
+#pragma config BOREN = OFF      // Brown-out Reset Enable bit (BOR disabled)
+#pragma config LVP = OFF        // Low-Voltage (Single-Supply) In-Circuit Serial Programming Enable bit (RB3 is digital I/O, HV on MCLR must be used for programming)
+#pragma config CPD = OFF        // Data EEPROM Memory Code Protection bit (Data EEPROM code protection off)
+#pragma config WRT = OFF        // Flash Program Memory Write Enable bits (Write protection off; all program memory may be written to by EECON control)
+#pragma config CP = OFF         // Flash Program Memory Code Protection bit (Code protection off)
+
+// Unless specified elsewhere, 4MHz system frequency is assumed
+#ifndef _XTAL_FREQ
+ #define _XTAL_FREQ 4000000
+#endif
+
+// Array to hold the "Seven segment pattern" for numbers 0 to 9 
+const unsigned char TABLE[] = {0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};
+#define X_1    RB0
+#define X_2    RB1
+#define X_3    RB2
+#define X_4    RB3
+#define Y_1    RB4
+#define Y_2    RB5
+#define Y_3    RB6
+#define Y_4    RB7
+#define Keypad_PORT               PORTB
+#define Keypad_PORT_Direction     TRISB   
+
+//
+void init_Keypad();
+char switch_press_scan();
+int  char2num(char keyChar);
+//
+void init_7seg(); 
+void seven_seg_display(int value);   
+void DELAY_SCN();
+
+/****************************************************************************
+* main()
+****************************************************************************/
+void main()
+{
+    char keyChar = 'n';
+    int  keyNum  = 0x00;
+    init_7seg();                             
+    init_Keypad(); 
+    while(1)
+    {
+        keyChar = switch_press_scan();
+        if(keyChar != 'n')
+        {    
+// Convert Ascii Character to Number
+            keyNum = char2num(keyChar);
+            seven_seg_display(keyNum);
+        };
+    }
+}
+
+/****************************************************************************
+* int char2num(Char keyChar)
+****************************************************************************/
+int char2num(char keyChar)
+{
+    int numChar = keyChar;
+    if (numChar > 57) {numChar = numChar - 7;};
+    numChar = numChar - 48;
+    return numChar;
+}
+
+/****************************************************************************
+* init_7seg()
+****************************************************************************/
+void init_7seg()
+{
+// PORTS
+
+// RA0 to RA6 - For the 6 digit sinking transistors
+	PORTA  = 0xff;                          
+	TRISA  = 0X00;                          // Set all 6 to output  
+// RD0 to RD7 - 8 - Segment 1 - 7 & dot      
+	PORTD  = 0x00;                          
+	TRISD  = 0X00;                          // Set all 8 to output    
+}
+
+/****************************************************************************
+* seven_seg_display(int value)
+****************************************************************************/
+void seven_seg_display(int value)
+{
+    int thousands;
+	int hundreds; 
+    int tens;
+    int ones;
+    int temp;                              //
+    
+	temp      = value;                     //
+	thousands = temp/1000;                 // Div by 1000  
+	hundreds  = (temp % 1000) / 100;       // (modulus from 1000) div     100 
+	tens      = (temp % 0x64) / 0xa;       // (modulus from 100)  div      10 
+	ones      = (temp % 0x64) % 0xa;       // (modulus from 100)  modulus  10
+
+// Thousands    
+    if(thousands > 0x09)
+    {
+		PORTD = ~0x71;                     //
+	}
+    else
+    {
+        if (thousands > 0x00) 
+        {
+            PORTD = ~TABLE[thousands];     //
+            PORTA = ~0x08;                 // N.B. ~ is a "compliment" operator
+            DELAY_SCN();                   //
+        };
+    };    
+// Hundreds    
+    if ((hundreds>0) || (thousands>0))
+    {
+        PORTD = ~TABLE[hundreds];          //
+        PORTA = ~0x04;                     //
+        DELAY_SCN();                       //
+    };
+// Tens
+    if ((tens>0) || (hundreds>0) || (thousands>0))
+    {
+        PORTD = ~TABLE[tens];              //
+        PORTA = ~0x02;                     //
+        DELAY_SCN();                       //
+    };
+// Units
+	PORTD = ~TABLE[ones];                  //
+	PORTA = ~0x01;                         //
+    DELAY_SCN();                           //
+
+    PORTA = 0xff;                          // Switch off
+}
+
+/****************************************************************************
+* DELAY_SCN()
+****************************************************************************/
+void DELAY_SCN()                                //
+{
+    __delay_us(1000);
+}
+
+/****************************************************************************
+* void init_Keypad(void)   
+****************************************************************************/
+void init_Keypad()
+{
+            Keypad_PORT           = 0xff;      // Set Keypad port pin values zero
+            Keypad_PORT_Direction = 0xF0;      // Last 4 pins input, First 4 pins output        
+//            OPTION_REG &= 0x7F;
+            OPTION_REGbits.nRBPU = 0;
+}
+
+/****************************************************************************
+* char keypad_scanner(void)     
+****************************************************************************/
+char keypad_scanner()  
+{           
+    X_1 = 0; X_2 = 1; X_3 = 1; X_4 = 1;    
+    if (Y_1 == 0) { return '1';};
+    if (Y_2 == 0) { return '2';};
+    if (Y_3 == 0) { return '3';};
+    if (Y_4 == 0) { return '4';};
+            
+    X_1 = 1; X_2 = 0; X_3 = 1; X_4 = 1;    
+    if (Y_1 == 0) { return '5';};
+    if (Y_2 == 0) { return '6';};
+    if (Y_3 == 0) { return '7';};
+    if (Y_4 == 0) { return '8';};
+            
+    X_1 = 1; X_2 = 1; X_3 = 0; X_4 = 1;    
+    if (Y_1 == 0) { return '9';};
+    if (Y_2 == 0) { return 'A';};
+    if (Y_3 == 0) { return 'B';};
+    if (Y_4 == 0) { return 'C';};
+           
+    X_1 = 1; X_2 = 1; X_3 = 1; X_4 = 0;    
+    if (Y_1 == 0) { return 'D';};
+    if (Y_2 == 0) { return 'E';};
+    if (Y_3 == 0) { return 'F';};
+    if (Y_4 == 0) { return '0';};
+            
+    return 'n';                   
+}
+
+/****************************************************************************
+* char switch_press_scan(void)    
+****************************************************************************/
+char switch_press_scan()                       // Get key from user
+{
+            char press = 'n';              // Assume no key pressed
+//            while(key=='n')              // Wait until a key is pressed
+//            {
+                press = keypad_scanner();      // Scan the keys again and again
+//            }
+            return press;                  //when key pressed then return its value
+}
