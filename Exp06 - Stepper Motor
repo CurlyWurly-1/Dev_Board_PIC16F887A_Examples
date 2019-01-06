@@ -3,7 +3,46 @@
 * Stepper Motor driver - with a frequency of 100Hz (10 ms)
 * Unfortunately, pin RE0 on the Sintech board also powers the Bell continously 
 * (so stick some blu-tack over it to muffle it for the time being!!) 
-*********************************************************************************************/
+*
+* Inside the motor there are two center tapped coils. 
+* The Red wire is common to both coils and it should be connected at VCC or 5V.
+* The other 4 wires (pink, red, yellow and blue) will control the rotation and this
+* depends on the combination of electrical signals placed to the 4 wires. 
+*
+* Depending on the movement required, this motor can be controlled using 3 modes:
+*
+* Full Drive: 
+* If two stator electromagnets are energized at a time, the motor will run at full torque referred as full-drive sequence mode.
+* Step	Blue	Pink	Yellow	Orange
+* 1	1	1	0	0
+* 2	0	1	1	0
+* 3	0	0	1	1
+* 4	1	0	0	1
+* 
+* Half-Drive: 
+* When alternatively one and two phases are energized, the motor will run in half drive mode. 
+* nIt’s used to increase the angular resolution. Drawback is less torque produced in this movement.
+* Step	Blue	Pink	Yellow	Orange
+* 1	1	0	0	0	
+* 2	1	1	0	0
+* 3	0	1	0	0
+* 4	0	1	1	0
+* 5	0	0	1	1
+* 6	0	0	0	1
+* 7	1	0	0	1	
+* 8	1	0	0	0
+*
+* Wave Drive: 
+* In this mode, one stator electromagnet is turned on. 
+* Its follows 4 steps same as Full-drive mode but it consumes low power with low torque.
+* Step	Blue	Pink	Yellow	Orange
+* 1	1	0	0	0
+* 2	0	1	0	0
+* 3	0	0	1	0
+* 4	0	0	0	1	
+*
+********************************************************************************************/
+
 
 #include <stdio.h>
 #include <stdlib.h>
