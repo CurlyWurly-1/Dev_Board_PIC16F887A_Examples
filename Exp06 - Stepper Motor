@@ -13,33 +13,33 @@
 *
 * Full Drive: 
 * If two stator electromagnets are energized at a time, the motor will run at full torque referred as full-drive sequence mode.
-* Step	Blue	Pink	Yellow	Orange
-* 1	1	1	0	0
-* 2	0	1	1	0
-* 3	0	0	1	1
-* 4	1	0	0	1
+* Step	Blue	Pink	Yellow	Orange	Number
+* 1	1	1	0	0	12
+* 2	0	1	1	0	 8
+* 3	0	0	1	1        3
+* 4	1	0	0	1        9
 * 
 * Half-Drive: 
 * When alternatively one and two phases are energized, the motor will run in half drive mode. 
-* nIt’s used to increase the angular resolution. Drawback is less torque produced in this movement.
-* Step	Blue	Pink	Yellow	Orange
-* 1	1	0	0	0	
-* 2	1	1	0	0
-* 3	0	1	0	0
-* 4	0	1	1	0
-* 5	0	0	1	1
-* 6	0	0	0	1
-* 7	1	0	0	1	
-* 8	1	0	0	0
+* It’s used to increase the angular resolution. Drawback is less torque produced in this movement.
+* Step	Blue	Pink	Yellow	Orange	Number
+* 1	1	0	0	0	 8
+* 2	1	1	0	0	12
+* 3	0	1	0	0	 4
+* 4	0	1	1	0	 6
+* 5	0	0	1	0 	 2
+* 6	0	0	1	1 	 3
+* 7	0	0	0	1	 1
+* 8	1	0	0	1	 9
 *
 * Wave Drive: 
 * In this mode, one stator electromagnet is turned on. 
 * Its follows 4 steps same as Full-drive mode but it consumes low power with low torque.
-* Step	Blue	Pink	Yellow	Orange
-* 1	1	0	0	0
-* 2	0	1	0	0
-* 3	0	0	1	0
-* 4	0	0	0	1	
+* Step	Blue	Pink	Yellow	Orange	Number
+* 1	1	0	0	0	8
+* 2	0	1	0	0	4
+* 3	0	0	1	0	2
+* 4	0	0	0	1	1
 *
 ********************************************************************************************/
 
