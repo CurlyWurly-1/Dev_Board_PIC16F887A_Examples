@@ -1,8 +1,8 @@
 /********************************************************************************************
 * PIC16F877A 
 * Stepper Motor driver - with a frequency of 100Hz (10 ms)
-* Unfortunately, pin RE0 on the Sintech board also  
-* powers the Bell so it sounds continously (so stick some blu-tack over it to muffle it!!) 
+* Unfortunately, pin RE0 on the Sintech board also powers the Bell continously 
+* (so stick some blu-tack over it to muffle it for the time being!!) 
 *********************************************************************************************/
 
 #include <stdio.h>
